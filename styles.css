@@ -15,8 +15,19 @@
     /* Safari, Android, iOS */
       url("fonts/aclonica-v10-latin-regular.svg#Aclonica") format("svg"); /* Legacy iOS */
 }
+/* asar-regular - latin */
+@font-face {
+  font-family: "Asar";
+  font-style: normal;
+  font-weight: 400;
+  src: local("Asar Regular"), local("Asar-Regular"),
+    url("fonts/asar-v7-latin-regular.woff2") format("woff2"),
+    /* Chrome 26+, Opera 23+, Firefox 39+ */
+      url("fonts/asar-v7-latin-regular.woff") format("woff"); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
 
 body {
+  font-family: Asar-Regular, serif;
 }
 
 h1 {
@@ -33,4 +44,8 @@ h5 {
 h6 {
 }
 h7 {
+}
+.main {
+  width: 100%;
+  margin: auto;
 }
