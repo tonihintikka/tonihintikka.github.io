@@ -6,32 +6,30 @@
   src: url("fonts/aclonica-v10-latin-regular.eot"); /* IE9 Compat Modes */
   src: local("Aclonica Regular"), local("Aclonica-Regular"),
     url("/fonts/aclonica-v10-latin-regular.eot?#iefix")
-      format("embedded-opentype"),
-    /* IE6-IE8 */ url("fonts/aclonica-v10-latin-regular.woff2") format("woff2"),
-    /* Super Modern Browsers */ url("fonts/aclonica-v10-latin-regular.woff")
-      format("woff"),
-    /* Modern Browsers */ url("fonts/aclonica-v10-latin-regular.ttf")
-      format("truetype"),
-    /* Safari, Android, iOS */
-      url("fonts/aclonica-v10-latin-regular.svg#Aclonica") format("svg"); /* Legacy iOS */
+      format("embedded-opentype"), /* IE6-IE8 */
+    url("fonts/aclonica-v10-latin-regular.woff2") format("woff2"), /* Super Modern Browsers */
+    url("fonts/aclonica-v10-latin-regular.woff") format("woff"), /* Modern Browsers */
+    url("fonts/aclonica-v10-latin-regular.ttf") format("truetype"), /* Safari, Android, iOS */
+    url("fonts/aclonica-v10-latin-regular.svg#Aclonica") format("svg"); /* Legacy iOS */
 }
+
 /* asar-regular - latin */
 @font-face {
   font-family: "Asar";
   font-style: normal;
   font-weight: 400;
   src: local("Asar Regular"), local("Asar-Regular"),
-    url("fonts/asar-v7-latin-regular.woff2") format("woff2"),
-    /* Chrome 26+, Opera 23+, Firefox 39+ */
-      url("fonts/asar-v7-latin-regular.woff") format("woff"); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+    url("fonts/asar-v7-latin-regular.woff2") format("woff2"), /* Chrome 26+, Opera 23+, Firefox 39+ */
+    url("fonts/asar-v7-latin-regular.woff") format("woff"); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
 }
 
 body {
-  font-family: Asar-Regular, serif;
+  font-family: 'Asar', serif;
   font-size: 1.3em;
-  animation: intro;
-  animation-duration: 1s;
+  animation: intro 1s ease-in-out;
+  background-color: white;
 }
+
 @keyframes intro {
   from {
     background-color: black;
@@ -42,22 +40,32 @@ body {
 }
 
 h1 {
-  font-family: Aclonica, tahoma;
+  font-family: "Aclonica", tahoma;
 }
-h2 {
-}
-h3 {
-}
-h4 {
-}
-h5 {
-}
-h6 {
-}
-h7 {
-}
+
 .main {
   width: 40%;
   margin: auto;
   margin-top: 200px;
+}
+
+/* Mobile-specific styles */
+@media only screen and (max-width: 768px) {
+  .main {
+    width: 90%;
+    margin-top: 100px;
+  }
+  body {
+    font-size: 1.1em;
+  }
+}
+
+@media only screen and (max-width: 480px) {
+  .main {
+    width: 95%;
+    margin-top: 50px;
+  }
+  body {
+    font-size: 1em;
+  }
 }
