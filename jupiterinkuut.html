@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jupiter ja Galilean Kuut – Simulaatio selitteillä</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <!-- Ladataan Three.js ja OrbitControls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.144.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.144.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    // 1. Perusasetukset: scene, kamera ja renderer
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+    
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      2000
+    );
+    camera.position.set(0, 100, 200);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    
+    // 2. Valaistus
+    const ambientLight = new THREE.AmbientLight(0x333333);
+    scene.add(ambientLight);
+    
+    const pointLight = new THREE.PointLight(0xffffff, 1.5);
+    pointLight.position.set(100, 100, 100);
+    scene.add(pointLight);
+    
+    // 3. Funktio tekstispriten luomiseen
+    // Tämä funktio luo canvasta tekstin sisältävän tekstispriten,
+    // jonka avulla voimme näyttää selitteet taivaankappaleille.
+    function makeTextSprite(message, parameters = {}) {
+      const fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Arial";
+      const fontsize = parameters.hasOwnProperty("fontsize") ? parameters["fontsize"] : 24;
+      const borderThickness = parameters.hasOwnProperty("borderThickness") ? parameters["borderThickness"] : 4;
+      const borderColor = parameters.hasOwnProperty("borderColor") ? parameters["borderColor"] : { r:0, g:0, b:0, a:1.0 };
+      const backgroundColor = parameters.hasOwnProperty("backgroundColor") ? parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };
+      const textColor = parameters.hasOwnProperty("textColor") ? parameters["textColor"] : { r:0, g:0, b:0, a:1.0 };
+
+      // Luodaan canvas-elementti ja piirtoyhteys
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      
+      // Määritetään fontti
+      context.font = fontsize + "px " + fontface;
+      
+      // Lasketaan tekstin leveys
+      const metrics = context.measureText(message);
+      const textWidth = metrics.width;
+      
+      // Asetetaan canvas-koon hieman isommaksi kuin tekstin koko, jotta border mahtuu
+      canvas.width = textWidth + borderThickness * 2;
+      canvas.height = fontsize * 1.4 + borderThickness * 2;
+      
+      // Piirretään taustaväri
+      context.fillStyle = "rgba(" + backgroundColor.r + "," + backgroundColor.g + "," + backgroundColor.b + "," + backgroundColor.a + ")";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Piirretään border
+      context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + "," + borderColor.b + "," + borderColor.a + ")";
+      context.lineWidth = borderThickness;
+      context.strokeRect(0, 0, canvas.width, canvas.height);
+      
+      // Piirretään teksti
+      context.fillStyle = "rgba(" + textColor.r + "," + textColor.g + "," + textColor.b + "," + textColor.a + ")";
+      context.font = fontsize + "px " + fontface;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(message, canvas.width / 2, canvas.height / 2);
+      
+      // Luodaan tekstuurin avulla sprite
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.minFilter = THREE.LinearFilter;
+      
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(spriteMaterial);
+      
+      // Skaalataan spritea halutun kokoiseksi
+      sprite.scale.set(canvas.width * 0.15, canvas.height * 0.15, 1);
+      
+      return sprite;
+    }
+    
+    // 4. Jupiter – keskuskappale
+    const jupiterRadius = 20;
+    const jupiterGeometry = new THREE.SphereGeometry(jupiterRadius, 64, 64);
+    const jupiterMaterial = new THREE.MeshPhongMaterial({ color: 0xffa500 });
+    const jupiter = new THREE.Mesh(jupiterGeometry, jupiterMaterial);
+    scene.add(jupiter);
+    
+    // Lisätään selite Jupiterille
+    const jupiterLabel = makeTextSprite("Jupiter", {
+      fontsize: 32,
+      borderThickness: 2,
+      backgroundColor: { r: 255, g: 255, b: 255, a: 0.8 },
+      textColor: { r: 0, g: 0, b: 0, a: 1.0 }
+    });
+    // Sijoitetaan etiketti Jupiterin yläpuolelle (noin säteen verran ylös)
+    jupiterLabel.position.set(0, jupiterRadius + 10, 0);
+    scene.add(jupiterLabel);
+    
+    // 5. Galilean kuut ja niiden määrittely
+    const moons = [];
+    
+    // Io
+    const ioRadius = 4;
+    const ioGeometry = new THREE.SphereGeometry(ioRadius, 32, 32);
+    const ioMaterial = new THREE.MeshPhongMaterial({ color: 0xffff00 });
+    const ioMesh = new THREE.Mesh(ioGeometry, ioMaterial);
+    scene.add(ioMesh);
+    moons.push({
+      name: "Io",
+      mesh: ioMesh,
+      orbitAngle: 0,
+      orbitSpeed: 0.02,
+      orbitA: 40,
+      orbitB: 30,
+      radius: ioRadius
+    });
+    
+    // Lisää Io:lle selite (lisätään suoraan kuun meshin lapsena, jotta etiketti liikkuu kuun mukana)
+    const ioLabel = makeTextSprite("Io", { fontsize: 20 });
+    // Sijoitetaan etiketti kuun yläpuolelle
+    ioLabel.position.set(0, ioRadius + 3, 0);
+    ioMesh.add(ioLabel);
+    
+    // Europa
+    const europaRadius = 3.4;
+    const europaGeometry = new THREE.SphereGeometry(europaRadius, 32, 32);
+    const europaMaterial = new THREE.MeshPhongMaterial({ color: 0xadd8e6 });
+    const europaMesh = new THREE.Mesh(europaGeometry, europaMaterial);
+    scene.add(europaMesh);
+    moons.push({
+      name: "Europa",
+      mesh: europaMesh,
+      orbitAngle: Math.random() * Math.PI * 2,
+      orbitSpeed: 0.012,
+      orbitA: 60,
+      orbitB: 45,
+      radius: europaRadius
+    });
+    
+    const europaLabel = makeTextSprite("Europa", { fontsize: 20 });
+    europaLabel.position.set(0, europaRadius + 3, 0);
+    europaMesh.add(europaLabel);
+    
+    // Ganymede
+    const ganymedeRadius = 5.8;
+    const ganymedeGeometry = new THREE.SphereGeometry(ganymedeRadius, 32, 32);
+    const ganymedeMaterial = new THREE.MeshPhongMaterial({ color: 0xd2b48c });
+    const ganymedeMesh = new THREE.Mesh(ganymedeGeometry, ganymedeMaterial);
+    scene.add(ganymedeMesh);
+    moons.push({
+      name: "Ganymede",
+      mesh: ganymedeMesh,
+      orbitAngle: Math.random() * Math.PI * 2,
+      orbitSpeed: 0.007,
+      orbitA: 80,
+      orbitB: 60,
+      radius: ganymedeRadius
+    });
+    
+    const ganymedeLabel = makeTextSprite("Ganymede", { fontsize: 20 });
+    ganymedeLabel.position.set(0, ganymedeRadius + 3, 0);
+    ganymedeMesh.add(ganymedeLabel);
+    
+    // Callisto
+    const callistoRadius = 5.3;
+    const callistoGeometry = new THREE.SphereGeometry(callistoRadius, 32, 32);
+    const callistoMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 });
+    const callistoMesh = new THREE.Mesh(callistoGeometry, callistoMaterial);
+    scene.add(callistoMesh);
+    moons.push({
+      name: "Callisto",
+      mesh: callistoMesh,
+      orbitAngle: Math.random() * Math.PI * 2,
+      orbitSpeed: 0.003,
+      orbitA: 100,
+      orbitB: 75,
+      radius: callistoRadius
+    });
+    
+    const callistoLabel = makeTextSprite("Callisto", { fontsize: 20 });
+    callistoLabel.position.set(0, callistoRadius + 3, 0);
+    callistoMesh.add(callistoLabel);
+    
+    // 6. Ratojen piirtäminen (ellipsin muotoiset viivat) Jupiterin ympärille
+    function addOrbitPath(orbitA, orbitB) {
+      const curve = new THREE.EllipseCurve(
+        0, 0,      // Jupiterin keskipiste (origo)
+        orbitA, orbitB,
+        0, 2 * Math.PI,
+        false,
+        0
+      );
+      const points = curve.getPoints(100).map(p => new THREE.Vector3(p.x, 0, p.y));
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+      const orbitLine = new THREE.Line(geometry, material);
+      scene.add(orbitLine);
+    }
+    
+    moons.forEach(moon => {
+      addOrbitPath(moon.orbitA, moon.orbitB);
+    });
+    
+    // 7. Tulivuoret Io:lle
+    function addVolcano(moon, phi, theta, coneHeight, coneRadius) {
+      const r = moon.radius;
+      const pos = new THREE.Vector3(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.cos(phi),
+        r * Math.sin(phi) * Math.sin(theta)
+      );
+      const coneGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 8);
+      const coneMaterial = new THREE.MeshPhongMaterial({ color: 0x8B0000 });
+      const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+      const normal = pos.clone().normalize();
+      cone.position.copy(pos.clone().add(normal.clone().multiplyScalar(coneHeight / 2)));
+      const quaternion = new THREE.Quaternion();
+      quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+      cone.quaternion.copy(quaternion);
+      moon.mesh.add(cone);
+    }
+    
+    const ioMoon = moons.find(m => m.name === "Io");
+    if (ioMoon) {
+      addVolcano(ioMoon, Math.PI / 4, 0, 1, 0.4);
+      addVolcano(ioMoon, Math.PI / 3, Math.PI / 2, 1, 0.4);
+      addVolcano(ioMoon, Math.PI / 6, Math.PI, 1, 0.4);
+    }
+    
+    // 8. Animaatiosilmukka
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      // Jupiter pyörii hitaasti y-akselinsa ympäri
+      jupiter.rotation.y += 0.001;
+      
+      // Päivitetään kunkin kuun sijainti ellipsiradalla
+      moons.forEach(moon => {
+        moon.mesh.position.x = moon.orbitA * Math.cos(moon.orbitAngle);
+        moon.mesh.position.z = moon.orbitB * Math.sin(moon.orbitAngle);
+        moon.orbitAngle += moon.orbitSpeed;
+        // Pyöritetään kuuta myös oman akselinsa ympäri
+        moon.mesh.rotation.y += 0.005;
+      });
+      
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+    
+    // Päivitetään näkymä ikkunan koon muuttuessa
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
