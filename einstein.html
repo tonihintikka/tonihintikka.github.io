@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>Suhteellisuusteorian Animaatio</title>
+  <style>
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background-color: #000;
+      font-family: Arial, sans-serif;
+    }
+    .label {
+      font-family: sans-serif;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 2px;
+      border-radius: 4px;
+    }
+    #info-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 300px;
+      z-index: 1000;
+    }
+    .observer-info {
+      margin-top: 10px;
+      padding: 5px;
+      border-radius: 5px;
+    }
+    .red { background-color: rgba(255, 0, 0, 0.2); }
+    .green { background-color: rgba(0, 255, 0, 0.2); }
+    .blue { background-color: rgba(0, 0, 255, 0.2); }
+    h2 { 
+      margin-top: 0;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div id="info-panel">
+    <h2>Einsteinin suhteellisuusteoria: Ajan hidastuminen</h2>
+    
+    <p>Tämä animaatio näyttää yhden suhteellisuusteorian merkillisimmistä ilmiöistä: <strong>ajan hidastumisen</strong>.</p>
+    
+    <p>Mitä nopeammin liikut, sitä hitaammin aika kuluu sinulle. Tämä ei ole vain tunne, vaan oikea fyysinen ilmiö!</p>
+
+    <div class="observer-info red">
+      🔴 Punainen pallo: Paikallaan<br>
+      → Aika kuluu normaalisti
+    </div>
+
+    <div class="observer-info green">
+      🟢 Vihreä pallo: 50% valonnopeudesta<br>
+      → Aika kuluu hitaammin
+    </div>
+
+    <div class="observer-info blue">
+      🔵 Sininen pallo: 80% valonnopeudesta<br>
+      → Aika kuluu vielä hitaammin
+    </div>
+
+    <p>Huomaa, miten pallojen yläpuolella olevat kellot käyvät eri tahtiin. Tätä kutsutaan <strong>aikadilataatioksi</strong>.</p>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    try {
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 5, 20);
+
+      const renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        preserveDrawingBuffer: true,
+        powerPreference: "high-performance"
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const labelRenderer = new CSS2DRenderer();
+      labelRenderer.setSize(window.innerWidth, window.innerHeight);
+      labelRenderer.domElement.style.position = 'absolute';
+      labelRenderer.domElement.style.top = '0';
+      document.body.appendChild(labelRenderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 5;
+      controls.maxDistance = 50;
+      controls.maxPolarAngle = Math.PI / 2;
+      controls.update();
+
+      const gridHelper = new THREE.GridHelper(20, 20);
+      scene.add(gridHelper);
+
+      class Observer {
+        constructor(speed, initialPosition, color) {
+          this.speed = speed;
+          this.properTime = 0;
+          this.mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 16, 16),
+            new THREE.MeshBasicMaterial({ color: color })
+          );
+          this.mesh.position.copy(initialPosition);
+
+          const labelDiv = document.createElement('div');
+          labelDiv.className = 'label';
+          labelDiv.innerHTML = 't = 0.00 s';
+          this.label = new CSS2DObject(labelDiv);
+          this.label.position.set(0, 1, 0);
+          this.mesh.add(this.label);
+        }
+
+        update(deltaTime) {
+          const dilationFactor = Math.sqrt(1 - this.speed * this.speed);
+          this.properTime += deltaTime * dilationFactor;
+          this.label.element.innerHTML = 't = ' + this.properTime.toFixed(2) + ' s';
+
+          this.mesh.position.x += this.speed * deltaTime * 5;
+          if (this.mesh.position.x > 10) {
+            this.mesh.position.x = -10;
+          }
+        }
+      }
+
+      const observers = [
+        new Observer(0.0, new THREE.Vector3(-5, 0.5, 0), 0xff0000),
+        new Observer(0.5, new THREE.Vector3(0, 0.5, 0), 0x00ff00),
+        new Observer(0.8, new THREE.Vector3(5, 0.5, 0), 0x0000ff)
+      ];
+
+      observers.forEach(observer => scene.add(observer.mesh));
+
+      const clock = new THREE.Clock();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        observers.forEach(observer => observer.update(delta));
+
+        controls.update();
+        renderer.render(scene, camera);
+        labelRenderer.render(scene, camera);
+      }
+
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+    } catch (error) {
+      const errorElement = document.createElement('div');
+      errorElement.style.position = 'fixed';
+      errorElement.style.top = '50%';
+      errorElement.style.left = '50%';
+      errorElement.style.transform = 'translate(-50%, -50%)';
+      errorElement.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+      errorElement.style.color = 'white';
+      errorElement.style.padding = '20px';
+      errorElement.style.borderRadius = '5px';
+      errorElement.textContent = error.message;
+      document.body.appendChild(errorElement);
+    }
+  </script>
+</body>
+</html>
